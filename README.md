@@ -437,5 +437,149 @@ Update ``roles/nginx/templates/nginx.conf.j2`` Comment the line `` include {{ ng
 - In the roles/webserver/tasks/main.yml , write the following tasks. use the code below :
 
 
+```
+- name: Install Apache
+  remote_user: ec2-user
+  become: true
+  become_user: root
+  ansible.builtin.yum:
+      name: "httpd"
+      state: present
+                   
+- name: Install Git
+  remote_user: ec2-user
+  become: true
+  become_user: root
+  ansible.builtin.yum:
+     name: "git"
+     state: present
+                   
+- name: Install EPEL release
+  remote_user: ec2-user
+  become: true
+  become_user: root
+  ansible.builtin.command:
+     cmd: sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm -y
+                   
+- name: Install dnf-utils and Remi repository
+   remote_user: ec2-user
+   become: true
+   become_user: root
+   ansible.builtin.command:
+     cmd: sudo dnf install dnf-utils http://rpms.remirepo.net/enterprise/remi-release-9.rpm -y
+                   
+- name: Reset PHP module
+  remote_user: ec2-user
+  become: true
+  become_user: root
+  ansible.builtin.command:
+     cmd: sudo dnf module reset php -y
+                   
+- name: Enable PHP 7.4 module
+  remote_user: ec2-user
+  become: true
+  become_user: root
+  ansible.builtin.command:
+     cmd: sudo dnf module enable php:remi-7.4 -y
+                   
+- name: Install PHP and extensions
+  remote_user: ec2-user
+  become: true
+  become_user: root
+  ansible.builtin.yum:
+   name:
+     - php
+     - php-opcache
+     - php-gd
+     - php-curl
+     - php-mysqlnd
+   state: present
+                   
+- name: Install MySQL client
+  remote_user: ec2-user
+  become: true
+  become_user: root
+  ansible.builtin.yum:
+   name: "mysql"
+   state: present
+                   
+- name: Start PHP-FPM service
+  remote_user: ec2-user
+  become: true
+  become_user: root
+  ansible.builtin.service:
+    name: php-fpm
+    state: started
+                   
+- name: Enable PHP-FPM service
+  remote_user: ec2-user
+  become: true
+  become_user: root
+  ansible.builtin.service:
+   name: php-fpm
+   enabled: true
+                   
+- name: Set SELinux boolean for httpd_execmem
+  remote_user: ec2-user
+  become: true
+  become_user: root
+  ansible.builtin.command:
+   cmd: sudo setsebool -P httpd_execmem 1
+                   
+- name: Clone a repo
+  remote_user: ec2-user
+  become: true
+  become_user: root
+  ansible.builtin.git:
+   repo: https://github.com/citadelict/tooling.git
+   dest: /var/www/html
+   force: yes
+                   
+- name: Copy HTML content to one level up
+  remote_user: ec2-user
+  become: true
+  become_user: root
+   command: cp -r /var/www/html/html/ /var/www/
+                   
+- name: Start httpd service, if not started
+  remote_user: ec2-user
+  become: true
+  become_user: root
+  ansible.builtin.service:
+   name: httpd
+   state: started
+                   
+- name: Recursively remove /var/www/html/html directory
+  remote_user: ec2-user
+  become: true
+  become_user: root
+  ansible.builtin.file:
+   path: /var/www/html/html
+   state: absent
+
+```
+![image](https://github.com/user-attachments/assets/509a204d-f55a-41ae-bca9-8c32e9dc7f8a)
+
+- The code above tells ansible to install apache on the webservers , install git, install php and all its dependencies, clone the website from out github repo,as well ascopy the website files into the /var/www/html directory.
+- Create a pull request and merge with your main branch of your github repo.
+- Login to your ansible server via terminal and change directory into your ansible project, pull the recent changes done into your server
+
+```
+git pull origin main
+```
 
 
+Finally, run the playbook command against the inventory/uat files
+
+```
+ansible-playbook -i inventory/uat.yml playbooks/site.yml
+```
+
+![image](https://github.com/user-attachments/assets/b2e567f8-02ef-4161-9a41-b5c3469a1edf)
+
+![image](https://github.com/user-attachments/assets/289bb462-8e32-4629-a970-08f47114b6c2)
+
+
+Output:
+
+![image](https://github.com/user-attachments/assets/210ce13e-bc0e-4a0d-816a-0df17ef7aa57)
